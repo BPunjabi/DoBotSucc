@@ -128,11 +128,11 @@ classdef SafeCoExpressSorting < handle
                 end
             end
             
-            [f,v,data] = plyread('extinguisher.ply','tri'); 
+            [f,v,data] = plyread('LegoMan.ply','tri'); 
             vertexColours = [data.vertex.red, data.vertex.green, data.vertex.blue] / 255; 
             for XSpacing = [0,0]
                 for YSpacing = [0,0]
-                    trisurf(f,v(:,1)+ XSpacing+2,v(:,2) + YSpacing+2, v(:,3)+ ZSpacing-0.45 ... 
+                    trisurf(f,v(:,1)+ XSpacing+2,v(:,2) + YSpacing+3, v(:,3)+ ZSpacing-0.45 ... 
                         ,'FaceVertexCData',vertexColours,'EdgeColor','interp','EdgeLighting','flat');
                 end
             end
