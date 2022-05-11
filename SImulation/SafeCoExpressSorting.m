@@ -1,9 +1,25 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%VARIABLES%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 classdef SafeCoExpressSorting < handle
     properties
+        running = true
         clear
         clc
         DoBot; %% Enable DoBot
+            %%%%%%%%% brick setup matracies%%%%%%%%%
+             rbricks = []; 
+            rb_vert = []; % Red Brick Verticies
+            rb_trans = []; % Red Brick Transforms
+            gbricks = [];
+            gb_vert = []; % Green Brick Verticies
+            gb_trans = []; % Green Brick Transforms
+            bbricks = [];
+            bb_vert = []; % Blue Brick Verticies
+            bb_trans = []; % Blue Brick Transforms
+        
+            RedtransVert = 0;
+            GreentransVert = 0;
+            BluetransVert = 0;
+        %%%%%%%%%%end brick setup matr%%%%%
         %% Initial DoBot joint configuration to ensure no initial collision
         DoBotq_i = [0 0 0 0];
 
@@ -18,10 +34,10 @@ classdef SafeCoExpressSorting < handle
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%VARIABLES%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%DECLARATIONS%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        function start = SafeCoExpressSorting(initpos,Brick1,Brick2,Brick3,Brick4,Brick5,Brick6,Brick7,Brick8,Brick9)
+        function start = SafeCoExpressSorting(initpos)
             disp('Initiialising Properties...')
             if nargin == 0; %% returns the number of function input arguments given in the call to the currently executing function
-
+                abc = 2
                 initx = 0.4; %% Initial x variable for UR5 position
                 inity = -1.7; %% Initial y variable for UR5 position
 
@@ -31,21 +47,6 @@ classdef SafeCoExpressSorting < handle
                 DoBotSpawn = transl(initx,inity,0); %% Inital UR5 Spawn Location
                 spawn = transl(0,0,0); %% Initial Table Spawn Location
 
-
-                %%%%UR5 Bricks%%%%
-                Brick1 = [0.8,-1.6,0]
-                Brick2 = [0.22,-1.2,0]
-                Brick3 = [0.5,-1.2,0]
-                Brick4 = [-0.2,-1.2,0]
-                Brick5 = [-0.82,-1.6,0]
-                %%%%UR5 Bricks%%%%
-
-                %%%%UR3 Bricks%%%%
-                Brick6 = [0.2,-0.2,0]
-                Brick7 = [0,-0.2,0]
-                Brick8 = [-0.4,-0.3,0]
-                Brick9 = [-0.7,-0.2,0]
-                %%%%UR3 Bricks%%%%
             end
             %% Grabbing X , Y , Z values from InitPos(Table) and placing on matrix
             xspace = initpos(1,4); %%Establish my workspace using initial x position
@@ -55,21 +56,23 @@ classdef SafeCoExpressSorting < handle
             %% Start Workspace
             start.space = [-5+xspace 4+xspace -3+yspace 3+yspace -0.55+zspace 2+zspace]; %%Workspace
             %% Start Setting Up Environment
-            %start.SetupEnvironment(initpos,spawn);
+            start.SetupEnvironment(initpos,spawn);
             %% Initialise and Start DoBot
-            start.InitialiseDoBot(initpos);
-            start.MakeDoBot();
-            start.Camera();
+           start.InitialiseDoBot(initpos);
+           start.MakeDoBot();
+            %start.Camera();
             %% Generate Bricks and their final Location
-            disp("press a key to begin")
-            pause();
-            start.GenerateBricks(Brick1,Brick2,Brick3,Brick4,Brick5,Brick6,Brick7,Brick8,Brick9);
-%             pause(2)
-%             disp("click a button to continue")
+           % disp("press a key to begin")
+            %pause();
+            start.GenerateBricks();         
+%            pause(2)
+%            disp("click a button to continue")
             %% Animate the robots to place bricks into position
             %             disp('Press Enter to begin')
             %             pause();
-            %start.AnimateRobots(DoBotSpawn,initx,inity,Brick1,Brick2,Brick3,Brick4,Brick5,Brick6,Brick7,Brick8,Brick9);
+            %start.Collisions()
+            %start.AnimateRobots(DoBotSpawn,initx,inity);
+            
             %disp('Generate the workspace (Radius) by pressing Enter');
             %pause();
             %% Generate the Work Radius
@@ -82,7 +85,6 @@ classdef SafeCoExpressSorting < handle
             disp('Forming Environment...')
             %% Setting up table
             [f,v,data] = plyread('table2.ply','tri');
-
             vertexColours = [data.vertex.red, data.vertex.green, data.vertex.blue] / 255;
 
             %% Uses UR3 X and Y coordinates and puts into matrix
@@ -199,6 +201,11 @@ classdef SafeCoExpressSorting < handle
 
         end
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%LOAD ENVIRONMENT%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        function Main(start)
+            while start.running == true
+
+            end
+        end
         function InitialiseDoBot(start, initpos)
             name = 'DoBot'; %%Named
             disp('Initialising DoBot')
@@ -207,7 +214,6 @@ classdef SafeCoExpressSorting < handle
             L2 = Link('d', 0,'a', 0, 'alpha', 0, 'qlim', [0, 17*pi/36]);
             L3 = Link('d', 0.05346, 'a',-0.148, 'alpha', 0, 'qlim', [-pi/18, 19*pi/36]);
             L4 = Link('d', -0.09, 'a', -0.16395, 'alpha', 0, 'qlim', [-pi/2, pi/2]);
-
             %% Spawn edits the base revolve below , revolves x on 1x4 matrix and x on 1x3 matrix making 3:4 matrix
             BaseZRevolve = trotz(pi/2);
             BaseStart = [BaseZRevolve(1:4, 1:3) initpos(1:4, 4)];
@@ -245,88 +251,74 @@ classdef SafeCoExpressSorting < handle
                 end
             end
         end
-        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%BRICKS%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        function GenerateBricks(start,Brick1,Brick2,Brick3,Brick4,Brick5,Brick6,Brick7,Brick8,Brick9)
-            i = 0;
+        function GenerateBricks(start)
             j = 0;
-            hold on
-            %%Place Bricks using co-ordinates fed in start function
-            rbricks = []
-            rb_vert = [] % Red Brick Verticies
-            rb_trans = [] % Red Brick Transforms
-            gbricks = []
-            gb_vert = [] % Green Brick Verticies
-            gb_trans = [] % Green Brick Transforms
-            bbricks = []
-            bb_vert = [] % Blue Brick Verticies
-            bb_trans = [] % Blue Brick Transforms
-
-            RedtransVert = 0;
-            GreentransVert = 0;
-            BluetransVert = 0;
             i = 1;
-            counter = 0
+            hold on
+           counter = 0
         for counter = 0:1:3
             i = 1;
-            j=0
+            j=0;
             while i <= 2 % Blocks
-                rbricks(i) = PlaceObject('Rbrick.ply');
-                gbricks(i) = PlaceObject('Gbrick.ply');
-                bbricks(i) = PlaceObject('Bbrick.ply');
+                start.rbricks(i) = PlaceObject('Rbrick.ply');
+                start.gbricks(i) = PlaceObject('Gbrick.ply');
+                start.bbricks(i) = PlaceObject('Bbrick.ply');
                 i = i+1;
             end
-            i = 1
+            i = 1;
             while i <= 2 %Array of vertacies
-                rb_vert(:,:,i) = get(rbricks(i), 'Vertices');
-                gb_vert(:,:,i) = get(gbricks(i), 'Vertices');
-                bb_vert(:,:,i) = get(bbricks(i), 'Vertices');
+                start.rb_vert(:,:,i) = get(start.rbricks(i), 'Vertices');
+                disp(start.rb_vert)
+                start.gb_vert(:,:,i) = get(start.gbricks(i), 'Vertices');
+                start.bb_vert(:,:,i) = get(start.bbricks(i), 'Vertices');
                 i = i+1;
 
             end
-            i=1
+            i=1;
             while i <= 2 %array of Brick Transforms
-                rb_trans(:,:,i) = trotz(rand()*2*pi)*transl(rand()*0.65,rand()*0.65,0);
-                gb_trans(:,:,i) = trotz(rand()*2*pi)*transl(rand()*0.65,rand()*0.65,0);
-                bb_trans(:,:,i) = trotz(rand()*2*pi)*transl(rand()*0.65,rand()*0.65,0);
+                start.rb_trans(:,:,i) = trotz(rand()*2*pi)*transl(rand()*0.65,rand()*0.65,0);
+                start.gb_trans(:,:,i) = trotz(rand()*2*pi)*transl(rand()*0.65,rand()*0.65,0);
+                start.bb_trans(:,:,i) = trotz(rand()*2*pi)*transl(rand()*0.65,rand()*0.65,0);
                 
                 i = i+1;
             end
 
-            rb_trans(:,:,1) = transl(0,-2,0);
-            gb_trans(:,:,1) = transl(0,-2,0);
-            bb_trans(:,:,1) = transl(0,-2,0);
+            start.rb_trans(:,:,1) = transl(0,-2,0);
+            start.gb_trans(:,:,1) = transl(0,-2,0);
+            start.bb_trans(:,:,1) = transl(0,-2,0);
             i = 1;
 
             while i < 500 %loop 1000 times for test
 
-                j=1
+                j=1;
                 while j <=2 % test moving all bricks at the same time
-                    rb_trans(:,:,j) = transl(-0.65+j*0.25,-1+(i*0.003),0)*trotz(0.02*i);
-                    gb_trans(:,:,j) = transl(-0.65+j*0.25,-1.5+(i*0.003),0)*trotz(0.02*i);
-                    bb_trans(:,:,j) = transl(-0.65+j*0.25,-2+(i*0.003),0)*trotz(0.02*i);
+                    start.rb_trans(:,:,j) = transl(-0.65+j*0.25,-1+(i*0.003),0)*trotz(0.02*i);
+                    start.gb_trans(:,:,j) = transl(-0.65+j*0.25,-1.5+(i*0.003),0)*trotz(0.02*i);
+                    start.bb_trans(:,:,j) = transl(-0.65+j*0.25,-2+(i*0.003),0)*trotz(0.02*i);
                     j=j+1;
                 end
                 j=1;
                 while j <=2 % each loop of main, put each brick where its transform array says it should be (animation purposes)
-                    RedtransVert = [rb_vert(:,:,j),ones(size(rb_vert(:,:,j),1),1)] * rb_trans(:,:,j)';
-                    GreentransVert = [gb_vert(:,:,j),ones(size(gb_vert(:,:,j),1),1)] * gb_trans(:,:,j)';
-                    BluetransVert = [bb_vert(:,:,j),ones(size(bb_vert(:,:,j),1),1)] * bb_trans(:,:,j)';
+                    start.RedtransVert = [start.rb_vert(:,:,j),ones(size(start.rb_vert(:,:,j),1),1)] * start.rb_trans(:,:,j)';
+                    start.GreentransVert = [start.gb_vert(:,:,j),ones(size(start.gb_vert(:,:,j),1),1)] * start.gb_trans(:,:,j)';
+                    start.BluetransVert = [start.bb_vert(:,:,j),ones(size(start.bb_vert(:,:,j),1),1)] * start.bb_trans(:,:,j)';
 
-                    set(rbricks(j),'Vertices',RedtransVert(:,1:3));
-                    set(gbricks(j),'Vertices',GreentransVert(:,1:3));
-                    set(bbricks(j),'Vertices',BluetransVert(:,1:3));
+                    set(start.rbricks(j),'Vertices',start.RedtransVert(:,1:3));
+                    set(start.gbricks(j),'Vertices',start.GreentransVert(:,1:3));
+                    set(start.bbricks(j),'Vertices',start.BluetransVert(:,1:3));
 
 
                     j=j+1;
                 end
                 drawnow()
-                i
+                i;
                 i = i + 1;
             end
+
             
         end
         end
-        function AnimateRobots(start,DoBotSpawn,initx,inity,Brick1,Brick2,Brick3,Brick4,Brick5,Brick6,Brick7,Brick8,Brick9)
+        function AnimateRobots(start,DoBotSpawn,initx,inity)
 
             %% Initial Ur5q_i joint configuration to ensure no initial collision
 
@@ -712,9 +704,24 @@ classdef SafeCoExpressSorting < handle
             %             xaxis(length(history));
             %             legend('v_x', 'v_y', 'v_z', '\omega_x', '\omega_y', '\omega_z')
         end
+        function Collisions(start)
+            pause(0.1)
+            
+            radius = 0.5;
+            sphereCenter = [1,1,0];
+            tr = start.DoBot.fkine(start.DoBot.getpos);
+            EEtoCentre = sqrt(sum((start.rb_trans-tr(1:3,4)').^2)); %%Replace rb_trans       
+              if EEtoCentre <= radius %% End Effector Distance
+             disp('Oh no a collision!');
+%            isCollision = 1;
+              else
+             disp(['SAFE: End effector to sphere centre distance (', num2str(EEtoCentre), 'm) is more than the sphere radius, ' num2str(radius), 'm']);
+%         isCollision = 0;
+            end
 
+        end
+       end
     end
-end
-
+  
 
 
