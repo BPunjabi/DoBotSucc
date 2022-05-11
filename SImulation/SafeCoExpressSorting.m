@@ -64,7 +64,9 @@ classdef SafeCoExpressSorting < handle
             %% Generate Bricks and their final Location
            % disp("press a key to begin")
             %pause();
-            start.GenerateBricks();         
+            start.GenerateBricks();
+
+            start.Main();
 %            pause(2)
 %            disp("click a button to continue")
             %% Animate the robots to place bricks into position
@@ -201,12 +203,7 @@ classdef SafeCoExpressSorting < handle
 
         end
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%LOAD ENVIRONMENT%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        function Main(start)
-            while start.running == true
-
-            end
-        end
-        function InitialiseDoBot(start, initpos)
+         function InitialiseDoBot(start, initpos)
             name = 'DoBot'; %%Named
             disp('Initialising DoBot')
             %% UR3 DH Paramaters found online
@@ -720,6 +717,39 @@ classdef SafeCoExpressSorting < handle
             end
 
         end
+        function Main(start)
+            i = 1
+            while start.running == true
+            
+                j=1;
+                while j <=2 % test moving all bricks at the same time
+                    start.rb_trans(:,:,j) = transl(-0.65+j*0.25,-1+(i*0.003),0)*trotz(0.02*i);
+                    start.gb_trans(:,:,j) = transl(-0.65+j*0.25,-1.5+(i*0.003),0)*trotz(0.02*i);
+                    start.bb_trans(:,:,j) = transl(-0.65+j*0.25,-2+(i*0.003),0)*trotz(0.02*i);
+                    j=j+1;
+                end
+                j=1;
+                while j <=2 % each loop of main, put each brick where its transform array says it should be (animation purposes)
+                    start.RedtransVert = [start.rb_vert(:,:,j),ones(size(start.rb_vert(:,:,j),1),1)] * start.rb_trans(:,:,j)';
+                    start.GreentransVert = [start.gb_vert(:,:,j),ones(size(start.gb_vert(:,:,j),1),1)] * start.gb_trans(:,:,j)';
+                    start.BluetransVert = [start.bb_vert(:,:,j),ones(size(start.bb_vert(:,:,j),1),1)] * start.bb_trans(:,:,j)';
+
+                    set(start.rbricks(j),'Vertices',start.RedtransVert(:,1:3));
+                    set(start.gbricks(j),'Vertices',start.GreentransVert(:,1:3));
+                    set(start.bbricks(j),'Vertices',start.BluetransVert(:,1:3));
+
+
+                    j=j+1;
+                end
+                drawnow()
+                i;
+                i = i + 1;
+                start.DoBot.fkine(DoBotq_i); %% For Camera sensor.. unsure if needed here
+            end
+
+        end
+   
+
        end
     end
   
